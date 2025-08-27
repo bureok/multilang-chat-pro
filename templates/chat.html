@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ room.title }} - GlobalChat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .room-info h1 {
+            color: #333;
+            font-size: 1.4em;
+            margin-bottom: 5px;
+        }
+
+        .room-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #666;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid #4facfe;
+        }
+
+        .leave-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .chat-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 10px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 15px;
+            max-width: 70%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.own {
+            flex-direction: row-reverse;
+            margin-left: auto;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #4facfe;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.own .message-content {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-align: right;
+            padding: 12px;
+            border-radius: 15px;
+        }
+
+        .message.other .message-content {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 12px;
+            border-radius: 15px;
+        }
+
+        .message.system {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            text-align: center;
+            margin: 10px auto;
+            max-width: 90%;
+        }
+
+        .message-info {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .message-text {
+            font-size: 1em;
+            line-height: 1.4;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .send-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .users-sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 10px 10px 10px 0;
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .users-sidebar h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .user-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #4facfe;
+        }
+
+        .user-nickname {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .user-language {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .typing-indicator {
+            padding: 10px 20px;
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            z-index: 1000;
+        }
+
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 15px;
+            }
+            
+            .chat-container {
+                flex-direction: column;
+            }
+            
+            .users-sidebar {
+                width: auto;
+                margin: 0 10px;
+                max-height: 150px;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status status-connected" id="connectionStatus">
+        Connected
+    </div>
+
+    <div class="header">
+        <div class="room-info">
+            <h1>{{ room.title }}</h1>
+            <div class="room-meta">Created by {{ room.created_by }}</div>
+        </div>
+        <div class="header-actions">
+            <div class="user-info">
+                <img src="{{ user.picture }}" alt="Profile" class="user-avatar" onerror="this.style.display='none'">
+                <span>{{ user.name }}</span>
+            </div>
+            <a href="/lobby" class="leave-btn">Leave Room</a>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-main">
+            <div id="chatMessages" class="chat-messages">
+                <!-- Messages will be displayed here -->
+            </div>
+            
+            <div id="typingIndicator" class="typing-indicator" style="display: none;">
+                Someone is typing...
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" id="messageInput" class="chat-input" placeholder="Type your message..." maxlength="500">
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+        
+        <div class="users-sidebar">
+            <h3>Online Users</h3>
+            <div id="usersList">
+                <!-- Online users will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 변수 초기화 (Flask 템플릿 변수를 안전하게 처리)
+        const socket = io();
+        let currentUser;
+        let roomInfo;
+        let onlineUsers = [];
+
+        // 서버에서 데이터 받기
+        try {
+            currentUser = JSON.parse('{{ user|tojson|safe }}');
+            roomInfo = JSON.parse('{{ room|tojson|safe }}');
+        } catch (e) {
+            console.error('Failed to parse template data:', e);
+            currentUser = { name: 'Unknown', language: 'en' };
+            roomInfo = { id: 'unknown', title: 'Unknown Room' };
+        }
+
+        // Language name mapping
+        const languageNames = {
+            'ko': '한국어',
+            'en': 'English',
+            'ja': '日本語',
+            'zh-tw': '繁體中文',
+            'es': 'Español',
+            'fr': 'Français',
+            'de': 'Deutsch'
+        };
+
+        // Socket connection events
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            updateConnectionStatus(true);
+            
+            // Join the room automatically
+            socket.emit('join_room_request', { room_id: roomInfo.id });
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Disconnected from server');
+            updateConnectionStatus(false);
+        });
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = 'Connected';
+                statusElement.className = 'connection-status status-connected';
+            } else {
+                statusElement.textContent = 'Disconnected';
+                statusElement.className = 'connection-status status-disconnected';
+            }
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            socket.emit('send_message', { message: message });
+            messageInput.value = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function addMessage(data, type = 'other') {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            if (type === 'system') {
+                messageDiv.innerHTML = `<div class="message-content"><div class="message-text">${escapeHtml(data.message)}</div></div>`;
+            } else {
+                const timeStr = new Date().toLocaleTimeString();
+                let avatarHtml = '';
+                let messageHtml = '';
+                
+                if (type === 'own') {
+                    // 자신의 메시지: 오른쪽에 프로필 사진
+                    avatarHtml = `<img src="${currentUser.picture || '/static/default-avatar.png'}" alt="Profile" class="message-avatar" onerror="this.src='/static/default-avatar.png'">`;
+                    messageHtml = `
+                        <div class="message-content">
+                            <div class="message-info">You • ${timeStr}</div>
+                            <div class="message-text">${escapeHtml(data.message)}</div>
+                        </div>
+                    `;
+                } else {
+                    // 다른 사용자의 메시지: 왼쪽에 프로필 사진
+                    // 사용자 정보에서 프로필 사진 찾기
+                    const user = onlineUsers.find(u => u.nickname === data.nickname);
+                    const userPicture = user ? user.picture : '/static/default-avatar.png';
+                    avatarHtml = `<img src="${userPicture}" alt="Profile" class="message-avatar" onerror="this.src='/static/default-avatar.png'">`;
+                    messageHtml = `
+                        <div class="message-content">
+                            <div class="message-info">${escapeHtml(data.nickname)} (${escapeHtml(data.original_language)}) • ${timeStr}</div>
+                            <div class="message-text">${escapeHtml(data.message)}</div>
+                        </div>
+                    `;
+                }
+                
+                messageDiv.innerHTML = avatarHtml + messageHtml;
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function updateUsersList() {
+            const usersListContainer = document.getElementById('usersList');
+            usersListContainer.innerHTML = '';
+            
+            if (onlineUsers.length === 0) {
+                usersListContainer.innerHTML = '<p style="color: #666; text-align: center;">No users online</p>';
+                return;
+            }
+            
+            onlineUsers.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="${user.picture || '/static/default-avatar.png'}" alt="Profile" 
+                             style="width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4facfe;" 
+                             onerror="this.src='/static/default-avatar.png'">
+                        <div>
+                            <div class="user-nickname">${escapeHtml(user.nickname)}</div>
+                            <div class="user-language">(${languageNames[user.language] || 'English'})</div>
+                        </div>
+                    </div>
+                `;
+                usersListContainer.appendChild(userDiv);
+            });
+        }
+
+        // Socket event listeners
+        socket.on('room_joined', function(data) {
+            if (data.success) {
+                onlineUsers = data.users || [];
+                updateUsersList();
+                addMessage({ message: 'Welcome to the chat room! Start your conversation!' }, 'system');
+            }
+        });
+
+        socket.on('receive_message', function(data) {
+            const messageType = data.is_own_message ? 'own' : 'other';
+            addMessage(data, messageType);
+        });
+
+        socket.on('user_joined', function(data) {
+            addMessage(data, 'system');
+            
+            if (data.user) {
+                onlineUsers.push(data.user);
+                updateUsersList();
+            }
+        });
+
+        socket.on('user_left', function(data) {
+            addMessage(data, 'system');
+            
+            if (data.user) {
+                onlineUsers = onlineUsers.filter(user => user.nickname !== data.user.nickname);
+                updateUsersList();
+            }
+        });
+
+        socket.on('update_users_list', function(data) {
+            onlineUsers = data.users || [];
+            updateUsersList();
+        });
+
+        socket.on('join_room_error', function(data) {
+            alert(data.message);
+            window.location.href = '/lobby';
+        });
+
+        // Send message with Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Auto-focus on message input
+        document.getElementById('messageInput').focus();
+
+        // 에러 처리
+        socket.on('connect_error', function(error) {
+            console.error('Connection error:', error);
+            updateConnectionStatus(false);
+        });
+    </script>
+</body>
+</html>

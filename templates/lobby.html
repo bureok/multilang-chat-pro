@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalChat - Lobby</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #4facfe;
+        }
+
+        .user-name {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        .rooms-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        .refresh-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .room-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .room-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .room-item:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.2);
+        }
+
+        .room-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .room-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .room-password {
+            color: #ffc107;
+        }
+
+        .room-users {
+            color: #28a745;
+        }
+
+        .create-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .language-selection {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .language-selection h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-join {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GlobalChat Lobby</h1>
+            <div class="user-info">
+                <img src="{{ user.picture }}" alt="Profile" class="user-avatar" onerror="this.style.display='none'">
+                <span class="user-name">{{ user.name }}</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="rooms-section">
+                <div class="section-header">
+                    <h2>Available Chat Rooms</h2>
+                    <button class="refresh-btn" onclick="loadRooms()">Refresh</button>
+                </div>
+                
+                <div id="roomList" class="room-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <p>Loading chat rooms...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="create-section">
+                <h2>Create New Room</h2>
+                
+
+
+                <div class="form-group">
+                    <label for="roomTitle">Room Title</label>
+                    <input type="text" id="roomTitle" placeholder="Enter room title" maxlength="50" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="roomPassword">Password (Optional)</label>
+                    <input type="password" id="roomPassword" placeholder="Leave empty for public room" maxlength="20">
+                </div>
+
+                <div class="form-group">
+                    <label for="maxUsers">Max Users</label>
+                    <select id="maxUsers">
+                        <option value="10">10 users</option>
+                        <option value="25">25 users</option>
+                        <option value="50" selected>50 users</option>
+                        <option value="100">100 users</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="createRoom()">Create Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h3>Enter Room Password</h3>
+            <input type="password" id="modalPassword" placeholder="Password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closePasswordModal()">Cancel</button>
+                <button class="btn-join" onclick="joinWithPassword()">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 변수 초기화 (Flask 템플릿 변수를 안전하게 처리)
+        const socket = io();
+        let currentUser;
+        let currentRoomId = null;
+
+        // 서버에서 사용자 정보 받기
+        try {
+            currentUser = JSON.parse('{{ user|tojson|safe }}');
+        } catch (e) {
+            console.error('Failed to parse user data:', e);
+            currentUser = { name: 'Unknown', language: 'english' };
+        }
+
+        // 페이지 로드시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRooms();
+            setInterval(loadRooms, 10000); // 10초마다 자동 새로고침
+            
+            // 로그인 시 선택한 언어 적용
+            const selectedLanguage = sessionStorage.getItem('selectedLanguage');
+            if (selectedLanguage) {
+                console.log('로그인 시 선택한 언어:', selectedLanguage);
+                // 서버에 언어 설정 전송
+                socket.emit('set_language', { language: selectedLanguage });
+                // 세션 저장소에서 제거
+                sessionStorage.removeItem('selectedLanguage');
+                
+                // 언어 설정 완료 후 사용자 정보 업데이트
+                setTimeout(() => {
+                    console.log('언어 설정 완료, 사용자 정보 업데이트');
+                }, 1000);
+            }
+        });
+
+        // 소켓 연결
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+
+
+        async function loadRooms() {
+            try {
+                const response = await fetch('/api/rooms');
+                if (!response.ok) throw new Error('Failed to load rooms');
+                const rooms = await response.json();
+                displayRooms(rooms);
+            } catch (error) {
+                console.error('Failed to load rooms:', error);
+                document.getElementById('roomList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <p>Failed to load rooms. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayRooms(rooms) {
+            const roomList = document.getElementById('roomList');
+            
+            if (rooms.length === 0) {
+                roomList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <p>No chat rooms available. Create the first one!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            roomList.innerHTML = '';
+            rooms.forEach(room => {
+                const roomElement = document.createElement('div');
+                roomElement.className = 'room-item';
+                roomElement.onclick = () => joinRoom(room.id, room.has_password);
+                
+                roomElement.innerHTML = `
+                    <div class="room-title">${escapeHtml(room.title)}</div>
+                    <div class="room-info">
+                        <span>by ${escapeHtml(room.created_by)}</span>
+                        <div>
+                            ${room.has_password ? '<span class="room-password">🔒 Private</span>' : '<span>🌐 Public</span>'}
+                            <span class="room-users">${room.user_count}/${room.max_users} users</span>
+                        </div>
+                    </div>
+                `;
+                
+                roomList.appendChild(roomElement);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function createRoom() {
+            const title = document.getElementById('roomTitle').value.trim();
+            const password = document.getElementById('roomPassword').value;
+            const maxUsers = document.getElementById('maxUsers').value;
+            
+            if (!title) {
+                alert('Please enter a room title');
+                return;
+            }
+
+            socket.emit('create_room', {
+                title: title,
+                password: password,
+                max_users: maxUsers
+            });
+        }
+
+        function joinRoom(roomId, hasPassword) {
+            if (hasPassword) {
+                currentRoomId = roomId;
+                document.getElementById('passwordModal').style.display = 'block';
+            } else {
+                socket.emit('join_room_request', { room_id: roomId });
+            }
+        }
+
+        function joinWithPassword() {
+            const password = document.getElementById('modalPassword').value;
+            socket.emit('join_room_request', { 
+                room_id: currentRoomId, 
+                password: password 
+            });
+            closePasswordModal();
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('modalPassword').value = '';
+            currentRoomId = null;
+        }
+
+        // Modal 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('passwordModal');
+            if (event.target === modal) {
+                closePasswordModal();
+            }
+        };
+
+        // Socket event listeners
+        
+        socket.on('room_created', function(data) {
+            if (data.success) {
+                // 방장 자동입장 UX: 즉시 채팅방 페이지로 이동
+                window.location.href = `/chat/${data.room_id}`;
+            }
+        });
+        
+        socket.on('redirect_to_chat', function(data) {
+            console.log('Redirecting to chat room:', data);
+            window.location.href = `/chat/${data.room_id}`;
+        });
+
+        socket.on('room_joined', function(data) {
+            if (data.success) {
+                window.location.href = `/chat/${data.room_info.id}`;
+            }
+        });
+
+        socket.on('join_room_error', function(data) {
+            alert(data.message);
+        });
+
+        socket.on('create_room_error', function(data) {
+            alert(data.message);
+        });
+
+        socket.on('language_set', function(data) {
+            console.log('Language updated:', data.language);
+            if (data.success) {
+                // 언어 설정 성공 시 사용자 정보 업데이트
+                currentUser.language = data.language;
+                console.log('사용자 언어 설정 완료:', data.language);
+            }
+        });
+
+        // 에러 처리
+        socket.on('connect_error', function(error) {
+            console.error('Connection error:', error);
+        });
+    </script>
+</body>
+</html>
