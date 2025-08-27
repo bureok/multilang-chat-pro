@@ -99,21 +99,13 @@ room_users = {}  # room_id: {user_session_ids}
 LANGUAGES = {
     'korean': 'ko',
     'english': 'en', 
-    'japanese': 'ja',
-    'traditional_chinese': 'zh-tw',
-    'spanish': 'es',
-    'french': 'fr',
-    'german': 'de'
+    'japanese': 'ja'
 }
 
 LANGUAGE_NAMES = {
     'ko': '한국어',
     'en': 'English',
-    'ja': '日本語',
-    'zh-tw': '繁體中文',
-    'es': 'Español',
-    'fr': 'Français',
-    'de': 'Deutsch'
+    'ja': '日本語'
 }
 
 def translate_text(text, target_lang):
