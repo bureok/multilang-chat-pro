@@ -6,320 +6,92 @@
     <title>GlobalChat - Lobby</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 1200px; margin: 0 auto; }
         .header {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-
-        .header h1 {
-            color: #333;
-            font-size: 1.8em;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid #4facfe;
-        }
-
-        .user-name {
-            color: #333;
-            font-weight: bold;
-        }
-
+        .header h1 { color: #333; font-size: 1.8em; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #4facfe; }
+        .user-name { color: #333; font-weight: bold; }
         .logout-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            text-decoration: none;
+            background: #dc3545; color: white; border: none; padding: 8px 15px;
+            border-radius: 20px; cursor: pointer; text-decoration: none;
         }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 350px;
-            gap: 20px;
-        }
-
-        .rooms-section {
+        .main-content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .rooms-section, .create-section {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 15px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .section-header h2 {
-            color: #333;
-            font-size: 1.4em;
-        }
-
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .section-header h2 { color: #333; font-size: 1.4em; }
         .refresh-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
+            background: #28a745; color: white; border: none; padding: 8px 15px;
+            border-radius: 20px; cursor: pointer;
         }
-
-        .room-list {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
+        .room-list { max-height: 500px; overflow-y: auto; }
         .room-item {
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: all 0.3s;
-            cursor: pointer;
+            border: 2px solid #e0e0e0; border-radius: 10px; padding: 15px; margin-bottom: 15px;
+            transition: all 0.3s; cursor: pointer;
         }
-
         .room-item:hover {
-            border-color: #4facfe;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.2);
+            border-color: #4facfe; transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79,172,254,0.2);
         }
-
-        .room-title {
-            font-weight: bold;
-            color: #333;
-            font-size: 1.1em;
-            margin-bottom: 5px;
-        }
-
-        .room-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .room-password {
-            color: #ffc107;
-        }
-
-        .room-users {
-            color: #28a745;
-        }
-
-        .create-section {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-
+        .room-title { font-weight: bold; color: #333; font-size: 1.1em; margin-bottom: 5px; }
+        .room-info { display: flex; justify-content: space-between; align-items: center; color: #666; font-size: 0.9em; }
+        .room-password { color: #ffc107; }
+        .room-users { color: #28a745; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
         .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 14px;
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px;
         }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #4facfe;
-        }
-
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #4facfe; }
         .btn {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s;
+            color: white; border: none; padding: 12px 25px; border-radius: 25px;
+            font-size: 16px; cursor: pointer; width: 100%; transition: transform 0.2s;
         }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .empty-state {
-            text-align: center;
-            color: #666;
-            padding: 40px;
-        }
-
-        .empty-state-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-
+        .btn:hover { transform: translateY(-2px); }
+        .empty-state { text-align: center; color: #666; padding: 40px; }
+        .empty-state-icon { font-size: 3em; margin-bottom: 10px; }
         @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header {
-                flex-direction: column;
-                gap: 15px;
-            }
+            .main-content { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 15px; }
         }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 400px;
-        }
-
-        .modal h3 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal-buttons button {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-cancel {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-join {
-            background: #28a745;
-            color: white;
-        }
-
+        /* 모달 공통 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 15% auto; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; }
+        .modal h3 { margin-bottom: 20px; color: #333; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-cancel { background: #6c757d; color: white; }
+        .btn-join { background: #28a745; color: white; }
         /* 언어 선택 모달 */
-        .language-modal {
-            display: none;
-            position: fixed;
-            z-index: 1001;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-        }
-
+        .language-modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); }
         .language-modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
+            background: white; margin: 15% auto; padding: 30px; border-radius: 15px;
+            width: 90%; max-width: 450px; text-align: center;
         }
-
-        .language-modal h3 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 1.3em;
-        }
-
-        .language-modal p {
-            margin-bottom: 25px;
-            color: #666;
-            line-height: 1.5;
-        }
-
-        .language-options {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
+        .language-modal h3 { margin-bottom: 20px; color: #333; font-size: 1.3em; }
+        .language-modal p { margin-bottom: 25px; color: #666; line-height: 1.5; }
+        .language-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .language-option {
-            padding: 12px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 16px;
+            padding: 12px 20px; border: 2px solid #e0e0e0; border-radius: 10px;
+            background: white; cursor: pointer; transition: all 0.3s; font-size: 16px;
         }
-
-        .language-option:hover {
-            border-color: #4facfe;
-            background: #f8f9fa;
-        }
-
+        .language-option:hover { border-color: #4facfe; background: #f8f9fa; }
         .language-option.selected {
             border-color: #4facfe;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -339,12 +111,12 @@
         </div>
 
         <div class="main-content">
+            <!-- 방 목록 -->
             <div class="rooms-section">
                 <div class="section-header">
                     <h2>Available Chat Rooms</h2>
-                    <button class="refresh-btn" onclick="loadRooms()">Refresh</button>
+                    <button id="refreshRoomsBtn" class="refresh-btn">Refresh</button>
                 </div>
-                
                 <div id="roomList" class="room-list">
                     <div class="empty-state">
                         <div class="empty-state-icon">💬</div>
@@ -353,19 +125,17 @@
                 </div>
             </div>
 
+            <!-- 방 생성 -->
             <div class="create-section">
                 <h2>Create New Room</h2>
-                
                 <div class="form-group">
                     <label for="roomTitle">Room Title</label>
                     <input type="text" id="roomTitle" placeholder="Enter room title" maxlength="50" required>
                 </div>
-
                 <div class="form-group">
                     <label for="roomPassword">Password (Optional)</label>
                     <input type="password" id="roomPassword" placeholder="Leave empty for public room" maxlength="20">
                 </div>
-
                 <div class="form-group">
                     <label for="maxUsers">Max Users</label>
                     <select id="maxUsers">
@@ -375,14 +145,41 @@
                         <option value="100">100 users</option>
                     </select>
                 </div>
-
-                <button class="btn" onclick="createRoom()">Create Room</button>
+                <button id="createRoomBtn" class="btn">Create Room</button>
             </div>
         </div>
     </div>
 
     <!-- 비밀번호 모달 -->
-    <div id="passwordModal" class="modal">
+    <div id="passwordModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <h3>Enter Room Password</h3>
-            <input type="password" id="modalPassword" placeholder="Password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <input type="password" id="modalPassword" placeholder="Password" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="cancelPasswordBtn">Cancel</button>
+                <button class="btn-join" id="joinRoomBtn">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 언어 선택 모달 -->
+    <div id="languageModal" class="language-modal">
+        <div class="language-modal-content">
+            <h3>Choose Your Language</h3>
+            <p>Select your preferred language for chat translation:</p>
+            <div class="language-options">
+                <div class="language-option" data-language="english">🇺🇸 English</div>
+                <div class="language-option" data-language="korean">🇰🇷 한국어 (Korean)</div>
+                <div class="language-option" data-language="japanese">🇯🇵 日本語 (Japanese)</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="cancelLanguageBtn">Cancel</button>
+                <button class="btn-join" id="confirmLanguageBtn" disabled>Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 외부 스크립트: 정적 폴더에 /static/js/lobby.js 로 저장 -->
+    <script src="/static/js/lobby.js" defer></script>
+</body>
+</html>
