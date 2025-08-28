@@ -49,33 +49,6 @@
             line-height: 1.6;
         }
 
-        .language-selector {
-            margin-bottom: 30px;
-            text-align: left;
-        }
-
-        .language-selector label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .language-selector select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            background: white;
-        }
-
-        .language-selector select:focus {
-            outline: none;
-            border-color: #4facfe;
-        }
-
         .login-section {
             margin-bottom: 30px;
         }
@@ -157,6 +130,15 @@
             border: 1px solid #ffcccc;
         }
 
+        .note {
+            background: #e8f4fd;
+            color: #1565c0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #bbdefb;
+        }
+
         @media (max-width: 480px) {
             .container {
                 margin: 20px;
@@ -172,24 +154,17 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌐 GlobalChat</h1>
+            <h1>🌍 GlobalChat</h1>
             <p>Real-time multilingual communication<br>Connect with people worldwide</p>
         </div>
 
-        <div class="language-selector">
-            <label for="language">Choose your native language:</label>
-            <select id="language">
-                <option value="english">English</option>
-                <option value="korean">한국어 (Korean)</option>
-                <option value="japanese">日本語 (Japanese)</option>
-            </select>
+        <div class="note">
+            <p>💡 You can select your preferred language when joining a chat room!</p>
         </div>
-
-
 
         <div class="login-section">
             <h3>Sign in to continue</h3>
-            <a href="#" class="google-login-btn" onclick="loginWithGoogle()">
+            <a href="/auth/google" class="google-login-btn">
                 <svg class="google-icon" viewBox="0 0 24 24">
                     <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -209,6 +184,7 @@
             <ul>
                 <li>Real-time translation between 3 languages</li>
                 <li>Create private or public chat rooms</li>
+                <li>Choose your language when joining rooms</li>
                 <li>Secure authentication with Google</li>
                 <li>Modern and responsive design</li>
                 <li>No message history stored</li>
@@ -217,8 +193,6 @@
     </div>
 
     <script>
-
-
         // URL 파라미터에서 에러 확인
         const urlParams = new URLSearchParams(window.location.search);
         const errorType = urlParams.get('error');
@@ -243,46 +217,17 @@
                         errorMessage = 'Google OAuth 인증 코드를 받을 수 없습니다. 다시 시도해주세요.';
                     }
                     break;
-                case 'no_user_info':
-                    errorMessage = '사용자 정보를 가져올 수 없습니다. 다시 시도해주세요.';
-                    break;
-                case 'no_token':
-                    errorMessage = '인증 토큰을 받을 수 없습니다. 다시 시도해주세요.';
-                    break;
-                case 'callback_failed':
-                    errorMessage = 'Google OAuth 콜백 처리에 실패했습니다. 다시 시도해주세요.';
-                    break;
                 case 'google_api_error':
                     errorMessage = 'Google API에서 사용자 정보를 가져올 수 없습니다. 다시 시도해주세요.';
                     break;
-                case 'api_call_failed':
-                    errorMessage = 'Google API 호출에 실패했습니다. 다시 시도해주세요.';
-                    break;
-                case 'no_access_token':
-                    errorMessage = 'Google 액세스 토큰을 받을 수 없습니다. 다시 시도해주세요.';
-                    break;
-                case 'auth_failed':
-                    errorMessage = 'Google 인증에 실패했습니다. 다시 시도해주세요.';
+                case 'callback_failed':
+                    errorMessage = 'Google OAuth 콜백 처리에 실패했습니다. 다시 시도해주세요.';
                     break;
                 default:
                     errorMessage = '로그인에 실패했습니다. 다시 시도해주세요.';
             }
             
             showError(errorMessage);
-        }
-
-        let currentLanguage = 'english';
-
-        // 언어 변경 감지
-        document.getElementById('language').addEventListener('change', function() {
-            currentLanguage = this.value;
-        });
-
-        function loginWithGoogle() {
-            const languageSelect = document.getElementById('language');
-            const language = languageSelect.value;
-            // Google 로그인 URL에 language를 쿼리 파라미터로 추가
-            window.location.href = `/auth/google?language=${encodeURIComponent(language)}`;
         }
 
         function showError(message) {

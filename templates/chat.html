@@ -60,6 +60,14 @@
             border: 2px solid #4facfe;
         }
 
+        .user-language {
+            background: #4facfe;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
         .leave-btn {
             background: #dc3545;
             color: white;
@@ -264,6 +272,92 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* 언어 선택 모달 */
+        .language-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .language-modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .language-modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3em;
+        }
+
+        .language-modal p {
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .language-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .language-option {
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .language-option:hover {
+            border-color: #4facfe;
+            background: #f8f9fa;
+        }
+
+        .language-option.selected {
+            border-color: #4facfe;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-join {
+            background: #28a745;
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -292,6 +386,31 @@
         Connected
     </div>
 
+    <!-- 언어 선택 모달 -->
+    <div id="languageModal" class="language-modal">
+        <div class="language-modal-content">
+            <h3>Choose Your Language</h3>
+            <p>Select your preferred language for chat translation:</p>
+            
+            <div class="language-options">
+                <div class="language-option" data-language="english">
+                    🇺🇸 English
+                </div>
+                <div class="language-option" data-language="korean">
+                    🇰🇷 한국어 (Korean)
+                </div>
+                <div class="language-option" data-language="japanese">
+                    🇯🇵 日本語 (Japanese)
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="goBackToLobby()">Back to Lobby</button>
+                <button class="btn-join" onclick="confirmLanguageAndJoin()" id="confirmLanguageBtn" disabled>Join Chat</button>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <div class="room-info">
             <h1>{{ room.title }}</h1>
@@ -301,6 +420,7 @@
             <div class="user-info">
                 <img src="{{ user.picture }}" alt="Profile" class="user-avatar" onerror="this.style.display='none'">
                 <span>{{ user.name }}</span>
+                <span class="user-language" id="userLanguageDisplay">선택 필요</span>
             </div>
             <a href="/lobby" class="leave-btn">Leave Room</a>
         </div>
@@ -317,8 +437,8 @@
             </div>
             
             <div class="chat-input-container">
-                <input type="text" id="messageInput" class="chat-input" placeholder="Type your message..." maxlength="500">
-                <button class="send-btn" onclick="sendMessage()">Send</button>
+                <input type="text" id="messageInput" class="chat-input" placeholder="Type your message..." maxlength="500" disabled>
+                <button class="send-btn" onclick="sendMessage()" disabled id="sendBtn">Send</button>
             </div>
         </div>
         
@@ -331,11 +451,19 @@
     </div>
 
     <script>
-        // JavaScript 변수 초기화 (Flask 템플릿 변수를 안전하게 처리)
         const socket = io();
         let currentUser;
         let roomInfo;
         let onlineUsers = [];
+        let selectedLanguage = null;
+        let isLanguageSet = false;
+
+        // 언어 이름 매핑
+        const languageNames = {
+            'ko': '한국어',
+            'en': 'English', 
+            'ja': '日本語'
+        };
 
         // 서버에서 데이터 받기
         try {
@@ -343,24 +471,51 @@
             roomInfo = JSON.parse('{{ room|tojson|safe }}');
         } catch (e) {
             console.error('Failed to parse template data:', e);
-            currentUser = { name: 'Unknown', language: 'en' };
+            currentUser = { name: 'Unknown' };
             roomInfo = { id: 'unknown', title: 'Unknown Room' };
         }
 
-        // Language name mapping
-        const languageNames = {
-            'ko': '한국어',
-            'en': 'English',
-            'ja': '日本語'
-        };
+        // 페이지 로드 시 언어 선택 모달 표시
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLanguageSelector();
+            showLanguageModal(); // 채팅방 입장 시 언어 선택 필수
+        });
 
-        // Socket connection events
+        function setupLanguageSelector() {
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.language-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedLanguage = this.dataset.language;
+                    document.getElementById('confirmLanguageBtn').disabled = false;
+                });
+            });
+        }
+
+        function showLanguageModal() {
+            selectedLanguage = null;
+            document.querySelectorAll('.language-option').forEach(opt => opt.classList.remove('selected'));
+            document.getElementById('confirmLanguageBtn').disabled = true;
+            document.getElementById('languageModal').style.display = 'block';
+        }
+
+        function goBackToLobby() {
+            window.location.href = '/lobby';
+        }
+
+        function confirmLanguageAndJoin() {
+            if (!selectedLanguage) {
+                alert('Please select a language first');
+                return;
+            }
+
+            socket.emit('set_language', { language: selectedLanguage });
+        }
+
+        // Socket 연결 이벤트
         socket.on('connect', function() {
             console.log('Connected to server');
             updateConnectionStatus(true);
-            
-            // Join the room automatically
-            socket.emit('join_room_request', { room_id: roomInfo.id });
         });
 
         socket.on('disconnect', function() {
@@ -379,7 +534,37 @@
             }
         }
 
+        // 언어 설정 완료 후 채팅방 입장
+        socket.on('language_set', function(data) {
+            if (data.success) {
+                isLanguageSet = true;
+                document.getElementById('languageModal').style.display = 'none';
+                
+                // UI 업데이트
+                const languageCode = data.language;
+                document.getElementById('userLanguageDisplay').textContent = languageNames[languageCode] || 'English';
+                
+                // 입력 필드 활성화
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('messageInput').placeholder = 'Type your message...';
+                
+                // 채팅방 입장 요청
+                socket.emit('join_room_request', { room_id: roomInfo.id });
+            }
+        });
+
+        socket.on('language_error', function(data) {
+            alert('Language setting failed: ' + data.message);
+            showLanguageModal();
+        });
+
         function sendMessage() {
+            if (!isLanguageSet) {
+                alert('Please select your language first');
+                return;
+            }
+
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value.trim();
             
@@ -408,7 +593,6 @@
                 let messageHtml = '';
                 
                 if (type === 'own') {
-                    // 자신의 메시지: 오른쪽에 프로필 사진
                     avatarHtml = `<img src="${currentUser.picture || '/static/default-avatar.png'}" alt="Profile" class="message-avatar" onerror="this.src='/static/default-avatar.png'">`;
                     messageHtml = `
                         <div class="message-content">
@@ -417,8 +601,6 @@
                         </div>
                     `;
                 } else {
-                    // 다른 사용자의 메시지: 왼쪽에 프로필 사진
-                    // 사용자 정보에서 프로필 사진 찾기
                     const user = onlineUsers.find(u => u.nickname === data.nickname);
                     const userPicture = user ? user.picture : '/static/default-avatar.png';
                     avatarHtml = `<img src="${userPicture}" alt="Profile" class="message-avatar" onerror="this.src='/static/default-avatar.png'">`;
@@ -446,7 +628,19 @@
                 return;
             }
             
+            // 중복 제거 및 정리된 사용자 목록 표시
+            const uniqueUsers = [];
+            const seenUsers = new Set();
+            
             onlineUsers.forEach(user => {
+                const userKey = user.nickname + '_' + (user.session_id || '');
+                if (!seenUsers.has(userKey) && user.nickname) {
+                    seenUsers.add(userKey);
+                    uniqueUsers.push(user);
+                }
+            });
+            
+            uniqueUsers.forEach(user => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
                 userDiv.innerHTML = `
@@ -464,7 +658,7 @@
             });
         }
 
-        // Socket event listeners
+        // Socket 이벤트 리스너들
         socket.on('room_joined', function(data) {
             if (data.success) {
                 onlineUsers = data.users || [];
@@ -479,26 +673,30 @@
         });
 
         socket.on('user_joined', function(data) {
-            addMessage(data, 'system');
+            // 중복 알림 방지
+            addMessage({ message: data.message }, 'system');
             
-            if (data.user) {
-                onlineUsers.push(data.user);
-                updateUsersList();
+            if (data.user && data.user.nickname) {
+                // 사용자 목록에 추가 (중복 체크)
+                const existingUserIndex = onlineUsers.findIndex(u => 
+                    u.nickname === data.user.nickname && u.session_id === data.user.session_id
+                );
+                
+                if (existingUserIndex === -1) {
+                    onlineUsers.push(data.user);
+                    updateUsersList();
+                }
             }
         });
 
         socket.on('user_left', function(data) {
-            addMessage(data, 'system');
-            
-            if (data.user) {
-                onlineUsers = onlineUsers.filter(user => user.nickname !== data.user.nickname);
+            if (data.nickname) {  // 유령 메시지 방지
+                addMessage({ message: data.message }, 'system');
+                
+                // 사용자 목록에서 제거
+                onlineUsers = onlineUsers.filter(user => user.nickname !== data.nickname);
                 updateUsersList();
             }
-        });
-
-        socket.on('update_users_list', function(data) {
-            onlineUsers = data.users || [];
-            updateUsersList();
         });
 
         socket.on('join_room_error', function(data) {
@@ -506,21 +704,25 @@
             window.location.href = '/lobby';
         });
 
-        // Send message with Enter key
+        // Enter 키로 메시지 전송
         document.getElementById('messageInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
 
-        // Auto-focus on message input
-        document.getElementById('messageInput').focus();
-
         // 에러 처리
         socket.on('connect_error', function(error) {
             console.error('Connection error:', error);
             updateConnectionStatus(false);
         });
+
+        // Modal 외부 클릭시 닫기 방지 (언어 선택 필수)
+        window.onclick = function(event) {
+            const modal = document.getElementById('languageModal');
+            if (event.target === modal && !isLanguageSet) {
+                // 언어 선택이 완료되지 않은 경우 닫기 방지
+                return false;
+            }
+        };
     </script>
-</body>
-</html>
