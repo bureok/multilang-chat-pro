@@ -6,4 +6,3 @@ gunicorn==21.2.0
 authlib==1.2.1
 requests==2.31.0
 googletrans==3.1.0a0
-hashlib2==1.0.3
