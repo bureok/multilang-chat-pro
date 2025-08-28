@@ -117,6 +117,11 @@ def on_set_language(data):
     
     language_code = translator_manager.get_language_code(data['language'])
     if user_manager.set_user_language(request.sid, language_code):
+        # 세션에도 언어 정보 저장
+        if 'user' in session:
+            session['user']['language'] = language_code
+            session.modified = True
+        
         emit('language_set', {'success': True, 'language': language_code})
     else:
         emit('language_error', {'message': 'Failed to set language'})

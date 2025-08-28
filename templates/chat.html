@@ -469,17 +469,52 @@
         try {
             currentUser = JSON.parse('{{ user|tojson|safe }}');
             roomInfo = JSON.parse('{{ room|tojson|safe }}');
+            
+            // 세션에 저장된 언어가 있는지 확인
+            if (currentUser.language) {
+                selectedLanguage = getLanguageNameFromCode(currentUser.language);
+                isLanguageSet = true;
+                
+                // UI 업데이트
+                document.getElementById('userLanguageDisplay').textContent = languageNames[currentUser.language] || 'English';
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                
+                // 바로 채팅방 입장
+                socket.emit('join_room_request', { room_id: roomInfo.id });
+            }
         } catch (e) {
             console.error('Failed to parse template data:', e);
             currentUser = { name: 'Unknown' };
             roomInfo = { id: 'unknown', title: 'Unknown Room' };
         }
 
-        // 페이지 로드 시 언어 선택 모달 표시
+        // 페이지 로드 시 언어 확인
         document.addEventListener('DOMContentLoaded', function() {
             setupLanguageSelector();
-            showLanguageModal(); // 채팅방 입장 시 언어 선택 필수
+            
+            // 세션에 언어가 저장되어 있지 않은 경우에만 모달 표시
+            if (!isLanguageSet) {
+                // sessionStorage 확인 (방 생성 후 자동 입장 시)
+                const savedLanguage = sessionStorage.getItem('userLanguage');
+                if (savedLanguage) {
+                    selectedLanguage = getLanguageNameFromCode(savedLanguage);
+                    socket.emit('set_language', { language: selectedLanguage });
+                    sessionStorage.removeItem('userLanguage');
+                } else {
+                    showLanguageModal();
+                }
+            }
         });
+
+        function getLanguageNameFromCode(code) {
+            const codeToName = {
+                'ko': 'korean',
+                'en': 'english', 
+                'ja': 'japanese'
+            };
+            return codeToName[code] || 'english';
+        }
 
         function setupLanguageSelector() {
             document.querySelectorAll('.language-option').forEach(option => {
