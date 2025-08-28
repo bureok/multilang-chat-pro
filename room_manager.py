@@ -153,7 +153,7 @@ class RoomManager:
             finally:
                 self.pending_room_cleanup.pop(room_id, None)
     
-    def schedule_room_cleanup(self, room_id, delay=6):
+    def schedule_room_cleanup(self, room_id, delay=59):
         """빈 방을 delay초 뒤 삭제 예약"""
         self.cancel_room_cleanup(room_id)  # 중복 예약 방지
         t = eventlet.spawn_after(delay, self.cleanup_room_if_still_empty, room_id)
