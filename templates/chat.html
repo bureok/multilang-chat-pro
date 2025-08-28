@@ -358,6 +358,22 @@
             color: white;
         }
 
+        .user-row { 
+            display:flex; align-items:center; gap:10px; 
+        }
+        .user-avatar-sm { 
+            width:28px; height:28px; border-radius:50%; border:1px solid #4facfe; object-fit:cover; 
+        }
+        .user-meta { 
+            display:flex; flex-direction:column; line-height:1.2; 
+        }
+        .user-nickname { 
+            font-weight:600; color:#333; 
+        }
+        .user-lang { 
+            font-size:12px; color:#666; 
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -378,6 +394,7 @@
             .message {
                 max-width: 85%;
             }
+
         }
     </style>
 </head>
@@ -607,53 +624,109 @@
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       
-        function updateUsersList() { /* (생략: 기존 그대로) */ }
-      
+        // escapeHtml이 없을 수도 있으니 안전하게 정의
+        var escapeHtml = window.escapeHtml || function (text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        };
+
+        function updateUsersList() {
+            const list = document.getElementById('usersList');
+            list.innerHTML = '';
+
+            if (!Array.isArray(onlineUsers) || onlineUsers.length === 0) {
+            list.innerHTML = '<div class="empty-state">No users online</div>';
+            return;
+            }
+
+            onlineUsers.forEach(u => {
+            const el = document.createElement('div');
+            el.className = 'user-item';
+
+            const isMe = (u.nickname === (currentUser?.name || ''));
+            const picture = u.picture || '/static/default-avatar.png';
+            const langLabel = (languageNames?.[u.language] || u.language || '').toString();
+
+            el.innerHTML = `
+                <div class="user-row" style="display:flex;align-items:center;gap:10px">
+                <img class="user-avatar-sm"
+                    src="${picture}"
+                    onerror="this.src='/static/default-avatar.png'"
+                    style="width:28px;height:28px;border-radius:50%;border:1px solid #4facfe;object-fit:cover">
+                <div class="user-meta" style="display:flex;flex-direction:column;line-height:1.2">
+                    <div class="user-nickname" style="font-weight:600;color:#333">
+                    ${escapeHtml(u.nickname)}${isMe ? ' <span style="color:#4facfe">(You)</span>' : ''}
+                    </div>
+                    <div class="user-lang" style="font-size:12px;color:#666">${escapeHtml(langLabel)}</div>
+                </div>
+                </div>
+            `;
+            list.appendChild(el);
+            });
+        }
+
         socket.on('room_joined', (data) => {
-          if (data.success) {
+            if (data.success) {
             onlineUsers = data.users || [];
             updateUsersList();
             addMessage({ message: 'Welcome to the chat room! Start your conversation!' }, 'system');
-      
+
             // ★ 한 번 사용한 브리지 값 정리
             if (String(savedRoomId) === String(roomInfo.id)) {
-              sessionStorage.removeItem('autoJoinRoomId');
-              sessionStorage.removeItem('roomPassword');
-              // 언어 코드는 계속 유지해도 되지만, 원하면 아래 주석 해제
-              // sessionStorage.removeItem('userLanguageCode');
+                sessionStorage.removeItem('autoJoinRoomId');
+                sessionStorage.removeItem('roomPassword');
+                // 언어 코드는 계속 유지해도 되지만, 원하면 아래 주석 해제
+                // sessionStorage.removeItem('userLanguageCode');
             }
-          }
+            }
         });
-      
+
         socket.on('receive_message', (data) => {
-          addMessage(data, data.is_own_message ? 'own' : 'other');
+            addMessage(data, data.is_own_message ? 'own' : 'other');
         });
-      
+
+        // 누군가 들어옴: 목록 갱신 + 시스템 메시지
         socket.on('user_joined', (data) => {
-          addMessage({ message: data.message }, 'system');
-          // (사용자 목록 갱신 로직은 기존 그대로 유지)
+            addMessage({ message: data.message }, 'system');
+            if (data.user) {
+            const exists = onlineUsers.some(u => u.nickname === data.user.nickname);
+            if (!exists) {
+                onlineUsers.push({
+                nickname: data.user.nickname,
+                language: data.user.language,
+                picture: data.user.picture
+                });
+                updateUsersList();
+            }
+            }
         });
-      
+
+        // 누군가 나감: 목록에서 제거 + 시스템 메시지
         socket.on('user_left', (data) => {
-          if (data.nickname) addMessage({ message: data.message }, 'system');
+            if (data?.nickname) {
+            onlineUsers = onlineUsers.filter(u => u.nickname !== data.nickname);
+            updateUsersList();
+            addMessage({ message: data.message }, 'system');
+            }
         });
-      
+
         socket.on('join_room_error', (data) => {
-          alert(data.message);
-          window.location.href = '/lobby';
+            alert(data.message);
+            window.location.href = '/lobby';
         });
-      
+
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') sendMessage();
         });
-      
+
         function sendMessage() {
-          if (!isLanguageSet) { alert('Please select your language first'); return; }
-          const input = document.getElementById('messageInput');
-          const msg = input.value.trim();
-          if (!msg) return;
-          socket.emit('send_message', { message: msg });
-          input.value = '';
+            if (!isLanguageSet) { alert('Please select your language first'); return; }
+            const input = document.getElementById('messageInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            socket.emit('send_message', { message: msg });
+            input.value = '';
         }
       </script>
       
